@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, PropTypes } from 'react';
 import './App.css';
 
 const DEFAULT_QUERY = 'redux';
@@ -19,7 +19,8 @@ class App extends Component {
     this.state = {
       results: null,
       searchKey: '',
-      searchTerm: DEFAULT_QUERY
+      searchTerm: DEFAULT_QUERY,
+      isLoading: false
     };
 
     this.needsToSearchTopstories = this.needsToSearchTopstories.bind(this);
@@ -48,11 +49,14 @@ class App extends Component {
       results: {
         ...results,
         [searchKey]: { hits: updatedHits, page }
-      }
+      },
+      isLoading: false
     });
   }
 
   fetchSearchTopstories(searchTerm, page) {
+    this.setState({ isLoading: true });
+
     fetch(`${PATH_BASE}${PATH_SEARCH}?${PARAM_SEARCH}${searchTerm}&${PARAM_PAGE}${page}&${PARAM_HPP}${DEFAULT_HPP}`)
       .then(response => response.json())
       .then(result => this.setSearchTopstories(result));
@@ -94,15 +98,18 @@ class App extends Component {
 
   render() {
     const {
-searchTerm,
+      searchTerm,
       results,
-      searchKey
+      searchKey,
+      isLoading
 } = this.state;
+
     const page = (
       results &&
       results[searchKey] &&
       results[searchKey].page
     ) || 0;
+
     const list = (
       results &&
       results[searchKey] &&
@@ -125,14 +132,21 @@ searchTerm,
           onDismiss={this.onDismiss}
         />
         <div className="interactions">
-          <Button onClick={() => this.fetchSearchTopstories(searchKey, page + 1)}>
-            More
-          </Button>
+          {isLoading
+            ? <Loading />
+            : <Button
+              onClick={() => this.fetchSearchTopstories(searchKey, page + 1)}>
+              More
+            </Button>
+          }
         </div>
       </div >
     );
   }
 }
+
+const Loading = () =>
+  <div>Loading ...</div>
 
 class Search extends Component {
   componentDidMount() {
@@ -189,7 +203,12 @@ const Table = ({ list, onDismiss }) =>
     )}
   </div>
 
-const Button = ({ onClick, className = '', children }) =>
+Table.propTypes = {
+  list: PropTypes.array.isRequired,
+  onDismiss: PropTypes.func.isRequired,
+};
+
+const Button = ({ onClick, className, children }) =>
   <button
     onClick={onClick}
     className={className}
@@ -197,5 +216,15 @@ const Button = ({ onClick, className = '', children }) =>
   >
     {children}
   </button>
+
+Button.propTypes = {
+  onClick: PropTypes.func.isRequired,
+  className: PropTypes.string,
+  children: PropTypes.node.isRequired
+};
+
+Button.defaultProps = {
+  className: '',
+};
 
 export default App;
