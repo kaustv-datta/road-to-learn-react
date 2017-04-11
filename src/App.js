@@ -1,4 +1,5 @@
 import React, { Component, PropTypes } from 'react';
+import { sortBy } from 'lodash';
 import './App.css';
 
 const DEFAULT_QUERY = 'redux';
@@ -11,6 +12,14 @@ const PARAM_SEARCH = 'query=';
 const PARAM_PAGE = 'page=';
 const PARAM_HPP = 'hitsPerPage=';
 
+const SORTS = {
+  NONE: list => list,
+  TITLE: list => sortBy(list, 'title'),
+  AUTHOR: list => sortBy(list, 'author'),
+  COMMENTS: list => sortBy(list, 'num_comments').reverse(),
+  POINTS: list => sortBy(list, 'points').reverse(),
+};
+
 class App extends Component {
 
   constructor(props) {
@@ -20,7 +29,8 @@ class App extends Component {
       results: null,
       searchKey: '',
       searchTerm: DEFAULT_QUERY,
-      isLoading: false
+      isLoading: false,
+      sortKey: 'NONE'
     };
 
     this.needsToSearchTopstories = this.needsToSearchTopstories.bind(this);
@@ -29,6 +39,11 @@ class App extends Component {
     this.onDismiss = this.onDismiss.bind(this);
     this.onSearchChange = this.onSearchChange.bind(this);
     this.onSearchSubmit = this.onSearchSubmit.bind(this);
+    this.onSort = this.onSort.bind(this);
+  }
+
+  onSort(sortKey) {
+    this.setState({ sortKey });
   }
 
   needsToSearchTopstories(searchTerm) {
@@ -101,7 +116,8 @@ class App extends Component {
       searchTerm,
       results,
       searchKey,
-      isLoading
+      isLoading,
+      sortKey
 } = this.state;
 
     const page = (
@@ -129,16 +145,16 @@ class App extends Component {
         </div>
         <Table
           list={list}
+          sortKey={sortKey}
+          onSort={this.onSort}
           onDismiss={this.onDismiss}
         />
         <div className="interactions">
-          {isLoading
-            ? <Loading />
-            : <Button
-              onClick={() => this.fetchSearchTopstories(searchKey, page + 1)}>
-              More
-            </Button>
-          }
+          <ButtonWithLoading
+            isLoading={isLoading}
+            onClick={() => this.fetchSearchTopstories(searchKey, page + 1)}>
+            More
+          </ButtonWithLoading>
         </div>
       </div >
     );
@@ -147,6 +163,9 @@ class App extends Component {
 
 const Loading = () =>
   <div>Loading ...</div>
+
+const withLoading = (Component) => ({ isLoading, ...rest }) =>
+  isLoading ? <Loading /> : <Component { ...rest } />
 
 class Search extends Component {
   componentDidMount() {
@@ -175,9 +194,59 @@ class Search extends Component {
   }
 }
 
-const Table = ({ list, onDismiss }) =>
+const Sort = ({ sortKey, onSort, children }) =>
+  <Button
+    onClick={() => onSort(sortKey)}
+    className="button-inline"
+  >
+    {children}
+  </Button>
+
+const Table = ({
+  list,
+  sortKey,
+  onSort,
+  onDismiss
+}) =>
   <div className="table">
-    {list.map(item =>
+    <div className="table-header">
+      <span style={{ width: '40%' }}>
+        <Sort
+          sortKey={'TITLE'}
+          onSort={onSort}
+        >
+          Title
+</Sort>
+      </span>
+      <span style={{ width: '30%' }}>
+        <Sort
+          sortKey={'AUTHOR'}
+          onSort={onSort}
+        >
+          Author
+</Sort>
+      </span>
+      <span style={{ width: '10%' }}>
+        <Sort
+          sortKey={'COMMENTS'}
+          onSort={onSort}
+        >
+          Comments
+</Sort>
+      </span>
+      <span style={{ width: '10%' }}>
+        <Sort
+          sortKey={'POINTS'}
+          onSort={onSort}
+        >
+          Points
+</Sort>
+      </span>
+      <span style={{ width: '10%' }}>
+        Archive
+</span>
+    </div>
+    {SORTS[sortKey](list).map(item =>
       <div key={item.objectID} className="table-row">
         <span style={{ width: '40%' }}>
           <a href={item.url}>{item.title}</a>
@@ -226,5 +295,7 @@ Button.propTypes = {
 Button.defaultProps = {
   className: '',
 };
+
+const ButtonWithLoading = withLoading(Button);
 
 export default App;
